@@ -1,0 +1,13 @@
+Foi desenvolvido um sistema de e-commerce usando Laravel, organizado no padrão MVC. 
+No back-end, criei as models para Cliente, Produto, Compra e Parcela, representando as entidades principais do sistema. 
+As compras possuem um relacionamento muitos-para-muitos com os produtos, gerenciado através de uma tabela pivot, garantindo uma estrutura flexível para armazenar quantidades e detalhes dos produtos comprados.
+O sistema utiliza SQLite como banco de dados, escolhido por sua praticidade e leveza. O SQLite facilita o desenvolvimento local e pequenos projetos, permitindo que o banco de dados seja integrado diretamente com o arquivo do sistema, sem a necessidade de configurar servidores de banco de dados mais complexos.
+Essa simplicidade ajudou a otimizar o tempo de desenvolvimento e garantiu uma fácil manipulação dos dados.
+O sistema permite cadastrar clientes e produtos, realizar compras, calcular o valor total com base nas quantidades e, em caso de parcelamento, gerar as parcelas e validar que o total corresponde ao valor da compra.
+O Bootstrap foi utilizado para criar uma interface simples e responsiva, enquanto o JavaScript foi responsável pelas validações dinâmicas, como o cálculo e a validação das parcelas no front-end.
+Os clientes possuem um relacionamento um-para-muitos com as compras, onde cada cliente pode realizar diversas compras. 
+Já as compras têm uma relação muitos-para-muitos com os produtos, gerenciada pela tabela pivot compra_produto, que armazena as quantidades adquiridas de cada produto. 
+Além disso, o sistema também permite o parcelamento das compras, gerando múltiplas parcelas por compra, com as devidas validações de datas e valores.
+Embora tenha enfrentado alguns desafios devido ao desempenho do hardware utilizado, o sistema foi finalizado e está completamente funcional, com suas relações bem estruturadas e otimizadas para manter os dados consistentes e o fluxo de operações claro e eficiente.
+1.1
+Enfrentados alguns problemas com as parcelas, as parcelas não eram exibidas quando na tela de edição da compra, atualmente as parcelas são exibidas, assim como também tem uma nova função para que seja adicionada novas parcelas, com essas atualizações agora além de ser possível adicionar e editar novas parcelas adicionei também uma verificação de valor, os quais devem ser sempre maiores que zero, adicionei na listagem uma coluna dedicada a exibir o numero de parcelas, com um botão de ver parcelas que abre um modal com o valor das parcelas e as datas de vencimento atuais.

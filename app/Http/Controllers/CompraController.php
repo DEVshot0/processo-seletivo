@@ -30,11 +30,10 @@ class CompraController extends Controller
             'parcelas' => 'nullable|array',
         ]);
 
-        $valor_total = 0;
-        foreach ($request->produtos as $produto) {
+        $valor_total = array_reduce($request->produtos, function ($total, $produto) {
             $produtoData = Produto::find($produto['produto_id']);
-            $valor_total += $produtoData->valor_unitario * $produto['quantidade'];
-        }
+            return $total + ($produtoData->valor_unitario * $produto['quantidade']);
+        }, 0);
 
         if ($request->pagamento == 'parcelado') {
             $somaParcelas = array_sum(array_column($request->parcelas, 'valor'));
@@ -66,16 +65,15 @@ class CompraController extends Controller
         return redirect()->route('compras.create')->with('success', 'Compra realizada com sucesso!');
     }
 
-public function edit($id)
-{
-    $compra = Compra::with('produtos', 'cliente')->findOrFail($id);
-    $clientes = Cliente::all();
-    $produtos = Produto::all();
-    $compras = Compra::with('cliente')->get();
+    public function edit($id)
+    {
+        $compra = Compra::with('produtos', 'cliente')->findOrFail($id);
+        $clientes = Cliente::all();
+        $produtos = Produto::all();
+        $compras = Compra::with('cliente')->get();
 
-    return view('compras.edit', compact('compra', 'clientes', 'produtos', 'compras'));
-}
-
+        return view('compras.edit', compact('compra', 'clientes', 'produtos', 'compras'));
+    }
 
     public function update(Request $request, $id)
     {
@@ -90,12 +88,13 @@ public function edit($id)
         ]);
 
         $compra = Compra::findOrFail($id);
-
         $valor_total = 0;
+
         foreach ($request->produtos as $produto) {
             $produtoData = Produto::find($produto['produto_id']);
             $valor_total += $produtoData->valor_unitario * $produto['quantidade'];
         }
+
         if ($request->pagamento == 'parcelado') {
             $somaParcelas = array_sum(array_column($request->parcelas, 'valor'));
             if ($somaParcelas != $valor_total) {
@@ -132,19 +131,19 @@ public function edit($id)
     public function destroy($id)
     {
         $compra = Compra::findOrFail($id);
-
-        if ($compra->produtos()->exists()) {
-            $compra->produtos()->detach(); 
-        }
-
-        if ($compra->parcelas()->exists()) {
-            $compra->parcelas()->delete();
-        }
-
-
+        $compra->produtos()->detach(); 
+        $compra->parcelas()->delete();
         $compra->delete();
 
         return redirect()->route('compras.create')->with('success', 'Compra excluída com sucesso.');
     }
-}
 
+    public function getParcelas($id)
+    {
+        $compra = Compra::with('parcelas')->find($id);
+        if ($compra) {
+            return response()->json(['parcelas' => $compra->parcelas]);
+        }
+        return response()->json(['parcelas' => []]); 
+    }
+}

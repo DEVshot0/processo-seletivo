@@ -72,6 +72,7 @@
                 <th>Cliente</th>
                 <th>Valor Total</th>
                 <th>Forma de Pagamento</th>
+                <th>Número de Parcelas</th>
                 <th>Ações</th>
             </tr>
         </thead>
@@ -82,6 +83,12 @@
                     <td>{{ $compra->cliente->nome_completo }}</td>
                     <td>R$ {{ number_format($compra->valor_total, 2, ',', '.') }}</td>
                     <td>{{ ucfirst($compra->forma_pagamento) }}</td>
+                    <td>
+                        {{ $compra->forma_pagamento == 'parcelado' ? $compra->parcelas->count() : 0 }}
+                        @if($compra->forma_pagamento == 'parcelado')
+                            <button type="button" class="btn btn-info btn-sm" onclick="mostrarParcelasModal({{ $compra->id }})">Ver Parcelas</button>
+                        @endif
+                    </td>
                     <td>
                         <a href="{{ route('compras.edit', $compra->id) }}" class="btn btn-warning btn-sm">Editar</a>
                         <form action="{{ route('compras.destroy', $compra->id) }}" method="POST" style="display:inline;">
@@ -94,6 +101,24 @@
             @endforeach
         </tbody>
     </table>
+</div>
+
+
+<div class="modal fade" id="parcelasModal" tabindex="-1" aria-labelledby="parcelasModalLabel" aria-hidden="true">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="parcelasModalLabel">Valores das Parcelas</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body" id="modal-parcelas-content">
+                <p>Nenhuma parcela disponível.</p>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Fechar</button>
+            </div>
+        </div>
+    </div>
 </div>
 
 <script>
@@ -165,7 +190,12 @@ function validarCompra() {
 
     if (document.querySelector('input[name="pagamento"]:checked').value === 'parcelado') {
         const somaParcelas = Array.from(document.querySelectorAll('input[name^="parcelas["][name$="[valor]"]')).reduce((total, input) => {
-            return total + parseFloat(input.value);
+            const valorParcela = parseFloat(input.value);
+            if (valorParcela <= 0) {
+                alert('O valor da parcela deve ser maior que zero.');
+                return false; 
+            }
+            return total + valorParcela;
         }, 0);
 
         if (somaParcelas !== valorTotal) {
@@ -175,6 +205,35 @@ function validarCompra() {
     }
 
     return true;
+}
+
+function mostrarParcelasModal(compraId) {
+    const modalContent = document.getElementById('modal-parcelas-content');
+    modalContent.innerHTML = 'Carregando...';
+
+    fetch(`/compras/${compraId}/parcelas`)
+        .then(response => {
+            if (!response.ok) {
+                throw new Error('Network response was not ok');
+            }
+            return response.json();
+        })
+        .then(data => {
+            if (data.parcelas.length > 0) {
+                modalContent.innerHTML = data.parcelas.map((parcela, index) => `
+                    <p>Parcela ${index + 1}: R$ ${parcela.valor_parcela} - Vencimento: ${parcela.data_vencimento}</p>
+                `).join('');
+            } else {
+                modalContent.innerHTML = '<p>Nenhuma parcela disponível.</p>';
+            }
+        })
+        .catch(error => {
+            modalContent.innerHTML = '<p>Erro ao carregar as parcelas. Tente novamente.</p>';
+            console.error('There was a problem with the fetch operation:', error);
+        });
+
+    const myModal = new bootstrap.Modal(document.getElementById('parcelasModal'));
+    myModal.show();
 }
 </script>
 @endsection

@@ -60,10 +60,21 @@
         <div id="parcelamento" style="display: {{ $compra->forma_pagamento == 'parcelado' ? 'block' : 'none' }}">
             <div class="form-group">
                 <label for="num_parcelas">Número de Parcelas</label>
-                <input type="number" id="num_parcelas" name="num_parcelas" class="form-control" min="1" value="{{ $compra->parcelas->count() }}">
+                <input type="number" id="num_parcelas" name="num_parcelas" class="form-control" min="1" value="{{ $compra->parcelas->count() }}" readonly>
             </div>
-            <button type="button" class="btn btn-secondary mb-3" onclick="simularParcelas()">Simular Parcelas</button>
-            <div id="parcelas"></div>
+
+            <div id="parcelas">
+                @foreach($compra->parcelas as $index => $parcela)
+                    <div class="form-group">
+                        <label>Parcela {{ $index + 1 }} - Valor:</label>
+                        <input type="number" name="parcelas[{{ $index }}][valor]" class="form-control" value="{{ $parcela->valor_parcela }}" step="0.01" required>
+                        <label>Data de Vencimento:</label>
+                        <input type="date" name="parcelas[{{ $index }}][data_vencimento]" class="form-control" value="{{ $parcela->data_vencimento }}" required>
+                    </div>
+                @endforeach
+            </div>
+
+            <button type="button" class="btn btn-secondary mb-3" onclick="adicionarParcela()">Adicionar Parcela</button>
         </div>
 
         <button type="submit" class="btn btn-primary">Atualizar Compra</button>
@@ -140,37 +151,38 @@ function atualizarPrecoTotal() {
     document.getElementById('total-compra').value = 'R$ ' + total.toFixed(2).replace('.', ',');
 }
 
-function simularParcelas() {
-    const numParcelas = document.getElementById('num_parcelas').value;
-    const parcelasDiv = document.getElementById('parcelas');
-    parcelasDiv.innerHTML = '';
-
-    const valorTotal = parseFloat(document.getElementById('total-compra').value.replace('R$', '').replace(',', '.'));
-    const valorParcela = (valorTotal / numParcelas).toFixed(2);
-    let dataAtual = new Date();
-
-    for (let i = 1; i <= numParcelas; i++) {
-        dataAtual.setMonth(dataAtual.getMonth() + 1);
-        const dataVencimento = dataAtual.toISOString().split('T')[0];
-
-        parcelasDiv.innerHTML += `
-            <div class="form-group">
-                <label>Parcela ${i} - Valor:</label>
-                <input type="number" name="parcelas[${i}][valor]" class="form-control" value="${valorParcela}" step="0.01" required>
-                <label>Data de Vencimento:</label>
-                <input type="date" name="parcelas[${i}][data_vencimento]" class="form-control" value="${dataVencimento}" required>
-            </div>
-        `;
+let parcelaIndex = {{ $compra->parcelas->count() }};
+function adicionarParcela() {
+    const parcelasContainer = document.getElementById('parcelas');
+    const ultimaParcela = document.querySelector(`#parcelas input[name="parcelas[${parcelaIndex - 1}][data_vencimento]"]`);
+    let novaData = new Date();
+    if (ultimaParcela) {
+        novaData = new Date(ultimaParcela.value);
+        novaData.setMonth(novaData.getMonth() + 1);
     }
+    const dataFormatada = novaData.toISOString().split('T')[0];
+    const parcelaHTML = `
+        <div class="form-group">
+            <label>Parcela ${parcelaIndex + 1} - Valor:</label>
+            <input type="number" name="parcelas[${parcelaIndex}][valor]" class="form-control" value="0.00" step="0.01" required>
+            <label>Data de Vencimento:</label>
+            <input type="date" name="parcelas[${parcelaIndex}][data_vencimento]" class="form-control" value="${dataFormatada}" required>
+        </div>
+    `;
+    parcelasContainer.insertAdjacentHTML('beforeend', parcelaHTML);
+    parcelaIndex++;
 }
 
 function validarCompra() {
-    const numParcelas = document.getElementById('num_parcelas').value;
     const valorTotal = parseFloat(document.getElementById('total-compra').value.replace('R$', '').replace(',', '.'));
-
     if (document.querySelector('input[name="pagamento"]:checked').value === 'parcelado') {
         const somaParcelas = Array.from(document.querySelectorAll('input[name^="parcelas["][name$="[valor]"]')).reduce((total, input) => {
-            return total + parseFloat(input.value);
+            const valorParcela = parseFloat(input.value.replace(',', '.'));
+            if (valorParcela <= 0) {
+                alert('O valor da parcela deve ser diferente de zero.');
+                return false; 
+            }
+            return total + valorParcela;
         }, 0);
 
         if (somaParcelas !== valorTotal) {
@@ -178,7 +190,6 @@ function validarCompra() {
             return false; 
         }
     }
-
     return true; 
 }
 </script>
